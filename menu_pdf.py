@@ -73,9 +73,12 @@ def create_menu_pdf(
 
         nombre = _latin1(menu.nombre)
         precio = f"{moneda}{menu.precio:,.0f}".replace(",", ".")
+        imagen = menu.icono_path
+        if imagen and os.path.exists(imagen):
+            pdf.image(imagen, x=pdf.get_x(), y=pdf.get_y(), w=10, h=10)
+            pdf.set_x(pdf.get_x() + 12)
 
-
-        pdf.cell(col_w_nombre, row_h, nombre, border=0, ln=0, align="L", fill=True)
+        pdf.cell(col_w_nombre - (12 if imagen and os.path.exists(imagen) else 0), row_h, nombre, border=0, ln=0, align="L", fill=True)
 
         pdf.cell(col_w_precio, row_h, _latin1(precio), border=0, ln=1, align="R", fill=True)
 

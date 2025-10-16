@@ -6,13 +6,20 @@ class Stock:
     def __init__(self):
         self.lista_ingredientes: list[Ingrediente] = []
 
-    def agregar_ingrediente(self, ingrediente: Ingrediente) -> None:
-        """Agrega o actualiza un ingrediente en el stock."""
+    def agregar_ingrediente(self, ingrediente: Ingrediente) -> str:
+        nombre_nuevo = ingrediente.nombre.strip().lower()
         for ing in self.lista_ingredientes:
-            if ing.nombre == ingrediente.nombre and ing.unidad == ingrediente.unidad:
-                ing.cantidad = float(ing.cantidad) + float(ingrediente.cantidad)
-                return
+            if ing.nombre.strip().lower() == nombre_nuevo:
+                if ing.unidad != ingrediente.unidad:
+                    # nombre igual pero unidad distinta -> no lo permitimos
+                    raise ValueError(f"Ya existe '{ing.nombre}' con unidad '{ing.unidad}'.")
+                # misma unidad -> sumar (acepta enteros negativos)
+                ing.cantidad = int(ing.cantidad) + int(ingrediente.cantidad)
+                return "actualizado"
+        # no existía -> agregar
         self.lista_ingredientes.append(ingrediente)
+        return "nuevo"
+
 
     def eliminar_ingrediente(self, nombre_ingrediente: str) -> None:
         """Elimina un ingrediente del stock por nombre."""

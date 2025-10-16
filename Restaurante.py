@@ -164,13 +164,21 @@ class AplicacionConPestanas(ctk.CTk):
         if not self.validar_nombre(nombre) or not self.validar_cantidad(cantidad):
             return
 
-        ingrediente = Ingrediente(nombre=nombre, unidad=unidad, cantidad=float(cantidad))
-        self.stock.agregar_ingrediente(ingrediente)
-        self.actualizar_treeview()
+        ingrediente = Ingrediente(nombre=nombre, unidad=unidad, cantidad=int(cantidad))
 
-        CTkMessagebox(title="Éxito", message=f"Ingrediente '{nombre}' agregado correctamente.", icon="info")
+        try:
+            estado = self.stock.agregar_ingrediente(ingrediente)
+            self.actualizar_treeview()
+            if estado == "nuevo":
+                CTkMessagebox(title="Nuevo ingrediente", message=f"Se agregó '{nombre}' al stock.", icon="info")
+            else:
+                CTkMessagebox(title="Stock actualizado", message=f"Se ajustó la cantidad de '{nombre}'.", icon="info")
+        except ValueError as e:
+            CTkMessagebox(title="Unidad incompatible", message=str(e), icon="warning")
+
         self.entry_nombre.delete(0, "end")
         self.entry_cantidad.delete(0, "end")
+
 
     def eliminar_ingrediente(self):
         seleccion = self.tree.selection()
@@ -200,7 +208,7 @@ class AplicacionConPestanas(ctk.CTk):
         frame_intermedio.pack(side="top", fill="x", padx=10, pady=5)
 
         global tarjetas_frame
-        tarjetas_frame = ctk.CTkFrame(frame_superior)
+        tarjetas_frame = ctk.CTkScrollableFrame(frame_superior)
         tarjetas_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
         self.boton_eliminar_menu = ctk.CTkButton(frame_intermedio, text="Eliminar Menú", command=self.eliminar_menu)
@@ -222,10 +230,35 @@ class AplicacionConPestanas(ctk.CTk):
         self.boton_generar_boleta.pack(side="bottom", pady=10)
 
     def generar_menus(self):
+        for widget in tarjetas_frame.winfo_children():
+            widget.destroy()
+
         for menu in self.menus:
-            if menu.esta_disponible(self.stock) and menu.nombre not in self.menus_creados:
-                self.crear_tarjeta(menu)
-                self.menus_creados.add(menu.nombre)
+            frame_menu = ctk.CTkFrame(tarjetas_frame)
+            frame_menu.pack(padx=10, pady=5, fill="x")
+
+            if menu.icono_path and os.path.exists(menu.icono_path):
+                img = ctk.CTkImage(Image.open(menu.icono_path), size=(64, 64))
+                label_img = ctk.CTkLabel(frame_menu, image=img, text="")
+                label_img.image = img
+                label_img.pack(side="left", padx=10)
+
+            info = ctk.CTkLabel(frame_menu, text=f"{menu.nombre}\n${menu.precio:,.0f}".replace(",", "."))
+            info.pack(side="left", padx=10)
+
+            boton_agregar = ctk.CTkButton(frame_menu, text="Agregar", command=lambda m=menu: self.agregar_a_pedido(m))
+            boton_agregar.pack(side="right", padx=10)
+
+    def agregar_a_pedido(self, menu):
+        self.pedido.agregar_menu(menu)
+        self.actualizar_treeview_pedido()
+    
+    def actualizar_treeview_pedido(self):
+        for item in self.treeview_menu.get_children():
+            self.treeview_menu.delete(item)
+        for item in self.pedido.mostrar_pedido():
+            self.treeview_menu.insert("", "end", values=(item["nombre"], item["cantidad"], f"${item['precio_unitario']:,.0f}".replace(",", ".")))
+        self.label_total.configure(text=f"Total: ${self.pedido.calcular_total():,.0f}".replace(",", "."))
 
     def eliminar_menu(self):
         seleccion = self.treeview_menu.selection()
@@ -311,11 +344,18 @@ class AplicacionConPestanas(ctk.CTk):
             return False
 
     def validar_cantidad(self, cantidad):
-        if cantidad.isdigit():
+        try:
+            valor = int(cantidad)
             return True
-        else:
-            CTkMessagebox(title="Error de Validación", message="La cantidad debe ser un número entero positivo.", icon="warning")
+        except ValueError:
+            CTkMessagebox(
+                title="Error de Validación",
+                message="La cantidad debe ser un número entero (positivo o negativo).",
+                icon="warning"
+            )
             return False
+
+
 
 if __name__ == "__main__":
     ctk.set_appearance_mode("Dark")  
