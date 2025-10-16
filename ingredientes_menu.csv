@@ -1,19 +1,21 @@
 ﻿nombre,unidad,cantidad
 Pan de completo,unid,10
-Pan de hamburguesa,unid,25
+Pan de hamburguesa,unid,30
 Lechuga,unid,30
 Carne de hamburguesa,unid,12
-Lamina de queso,unid,8
+Lamina de cheddar,unid,8
 Vienesa,unid,25
 Papas,unid,15
-Churrasco de carne,unid,11
 Coca cola,unid,18
 Tomate,unid,7
-Cebolla,unid,5
+Cebolla,unid,10
 Queso,unid,9
 Huevos,unid,6
 Vienesa,unid,12
-Palta,unid,100
-Pepsi,unid,100
-Carne de vacuno,unid,10
+Palta,unid,10
+Pepsi,unid,10
+Carne de vacuno,unid,15
 Masa de empanada,unid,40
+Intestino de vacuno,unid,10
+Longaniza,unid,10
+Chorizo,unid,8

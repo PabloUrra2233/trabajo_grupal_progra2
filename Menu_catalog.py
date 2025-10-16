@@ -8,6 +8,19 @@ Icono_Papas = "IMG/icono_papas_fritas_64x64.png"
 
 def get_default_menus() -> List[IMenu]:
     return [
+
+        CrearMenu(
+            "Sandwich de potito (Especialidad de la casa)",
+            [
+                Ingrediente("Intestino de vacuno", "unid", 0.5),
+                Ingrediente("Pan de hamburguesa", "unid", 1),
+                Ingrediente("longaniza", "unid", 0.5),
+                Ingrediente("Cebolla", "unid", 0.5),
+            ],
+            precio=2400,
+            icono_path="IMG/icono_hamburguesa_simple_64x64.png",
+        ),
+
         CrearMenu(
             "Completo",
             [
@@ -26,7 +39,7 @@ def get_default_menus() -> List[IMenu]:
                 Ingrediente("Pan de hamburguesa", "unid", 1),
                 Ingrediente("lechuga", "unidad", 0.5),
                 Ingrediente("Tomate", "unidad", 0.5),
-                Ingrediente("Lamina de queso", "unid", 1),
+                Ingrediente("Lamina de cheddar", "unid", 1),
             ],
             precio=2500,
             icono_path="IMG/icono_hamburguesa_simple_64x64.png",
@@ -39,7 +52,7 @@ def get_default_menus() -> List[IMenu]:
                 Ingrediente("Pan de hamburguesa", "unid", 1),
                 Ingrediente("lechuga", "unidad", 1),
                 Ingrediente("Tomate", "unidad", 1),
-                Ingrediente("Lamina de queso", "unid", 2),
+                Ingrediente("Lamina de cheddar", "unid", 2),
             ],
             precio=3500,
             icono_path="IMG/icono_hamburguesa_doble_64x64.png",        
@@ -74,4 +87,82 @@ def get_default_menus() -> List[IMenu]:
             precio=3000,
             icono_path=Icono_Papas,        
         ),
+
+        CrearMenu(
+            "Chorrillana simple",
+            [
+                Ingrediente("Carne de vacuno", "unid", 1),
+                Ingrediente("Papas", "unid", 3),
+                Ingrediente("Cebolla", "unidad", 1),
+                Ingrediente("Huevos", "unidad", 2),
+            ],
+            precio=5000,
+            icono_path="IMG/icono_chorrillana_64x64.png",
+        ),
+
+        CrearMenu(
+            "Chorrillana XL",
+            [
+                Ingrediente("Carne de vacuno", "unid", 2),
+                Ingrediente("Papas", "unid", 4),
+                Ingrediente("Cebolla", "unidad", 2),
+                Ingrediente("Huevos", "unidad", 2),
+                Ingrediente("Chorizo", "unid", 1),
+                Ingrediente("Vienesa", "unid", 1),
+            ],
+            precio=8000,
+            icono_path="IMG/icono_chorrillana_64x64.png",
+        ),
+
+        CrearMenu(
+            "Ensalada mixta",
+            [
+                Ingrediente("Tomate", "unid", 1),
+                Ingrediente("Lechuga", "unid", 1),
+                Ingrediente("Cebolla", "unid", 0.5),
+                Ingrediente("Huevo", "unid", 1)
+            ],
+            precio=1800,
+            icono_path="IMG/icono_ensalada_64x64.png",
+        ),
+
+        CrearMenu(
+            "Empanada frita",
+            [
+                Ingrediente("Masa de empanada", "unid", 1),
+                Ingrediente("Carne de vacuno", "unid", 0.5),
+                Ingrediente("Cebolla", "unid", 0.5),
+                Ingrediente("Huevo", "unid", 0.25),
+            ],
+            precio=1200,
+            icono_path="IMG/icono_empanada_queso_64x64.png",
+        ),
+        
+        CrearMenu(
+            "Empanada de queso",
+            [
+                Ingrediente("Masa de empanada", "unid", 1),
+                Ingrediente("Queso", "unid", 0.5),
+            ],
+            precio=1000,
+            icono_path="IMG/icono_empanada_queso_64x64.png",
+        ),
+        CrearMenu(
+            "Coca-Cola",
+            [
+                Ingrediente("Coca cola","unid",1),
+            ],
+            precio=1100,
+            icono_path="IMG/icono_cola_lata_64x64.png",
+        ),
+
+        CrearMenu(
+            "Pepsi",
+            [
+                Ingrediente("Coca cola","unid",1),
+            ],
+            precio=1100,
+            icono_path="IMG/icono_cola_64x64.png",
+        ),
+
     ]
