@@ -15,7 +15,7 @@ from menu_pdf import create_menu_pdf
 from ctk_pdf_viewer import CTkPDFViewer
 import os
 from tkinter.font import nametofont
-
+import os, shutil, time, uuid
 class AplicacionConPestanas(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -40,9 +40,11 @@ class AplicacionConPestanas(ctk.CTk):
         if selected_tab == "Stock":
             self.actualizar_treeview()
         elif selected_tab == "Pedido":
+            self.generar_menus()            
             self.actualizar_treeview_pedido()
         elif selected_tab == "Carta restorante":
             self.actualizar_treeview()
+
 
     def crear_pestanas(self):
         self.tab3 = self.tabview.add("carga de ingredientes")  
@@ -159,12 +161,25 @@ class AplicacionConPestanas(ctk.CTk):
     def ingresar_ingrediente(self):
         nombre = self.entry_nombre.get().strip()
         unidad = self.combo_unidad.get().strip()
-        cantidad = self.entry_cantidad.get().strip()
+        cantidad_txt = self.entry_cantidad.get().strip()
 
-        if not self.validar_nombre(nombre) or not self.validar_cantidad(cantidad):
+        if not self.validar_nombre(nombre) or not self.validar_cantidad(cantidad_txt):
             return
 
-        ingrediente = Ingrediente(nombre=nombre, unidad=unidad, cantidad=int(cantidad))
+        valor = int(cantidad_txt)
+
+ 
+        if valor < 0:
+            disponible = self._cantidad_actual(nombre, unidad)
+            if abs(valor) > disponible:
+                CTkMessagebox(
+                    title="Stock insuficiente",
+                    message=f"No puedes descontar {abs(valor)} {unidad} de '{nombre}'. Solo hay {disponible} en stock.",
+                    icon="warning"
+                )
+                return
+
+        ingrediente = Ingrediente(nombre=nombre, unidad=unidad, cantidad=valor)
 
         try:
             estado = self.stock.agregar_ingrediente(ingrediente)
@@ -246,20 +261,31 @@ class AplicacionConPestanas(ctk.CTk):
             info = ctk.CTkLabel(frame_menu, text=f"{menu.nombre}\n${menu.precio:,.0f}".replace(",", "."))
             info.pack(side="left", padx=10)
 
-            boton_agregar = ctk.CTkButton(frame_menu, text="Agregar", command=lambda m=menu: self.agregar_a_pedido(m))
+            disponible = self._stock_suficiente_para_menu(menu, 1)
+            boton_agregar = ctk.CTkButton(
+                frame_menu,
+                text=("Agregar" if disponible else "Sin stock"),
+                state=("normal" if disponible else "disabled"),
+                command=(lambda m=menu: self.agregar_a_pedido(m)) if disponible else None
+            )
             boton_agregar.pack(side="right", padx=10)
 
-    def agregar_a_pedido(self, menu):
-        self.pedido.agregar_menu(menu)
-        self.actualizar_treeview_pedido()
-    
-    def actualizar_treeview_pedido(self):
-        for item in self.treeview_menu.get_children():
-            self.treeview_menu.delete(item)
-        for item in self.pedido.mostrar_pedido():
-            self.treeview_menu.insert("", "end", values=(item["nombre"], item["cantidad"], f"${item['precio_unitario']:,.0f}".replace(",", ".")))
-        self.label_total.configure(text=f"Total: ${self.pedido.calcular_total():,.0f}".replace(",", "."))
 
+    def agregar_a_pedido(self, menu):
+        if not self._stock_suficiente_para_menu(menu, 1):
+            CTkMessagebox(title="Sin stock",
+                        message=f"No alcanza el stock para '{menu.nombre}'.",
+                        icon="warning")
+            return
+        # Descuenta del stock y agrega al pedido
+        self._descontar_stock_por_menu(menu, 1)
+        self.pedido.agregar_menu(menu)
+        # Refrescar vistas: stock, pedido y tarjetas (para deshabilitar agotados)
+        self.actualizar_treeview()
+        self.actualizar_treeview_pedido()
+        self.generar_menus()
+
+    
     def eliminar_menu(self):
         seleccion = self.treeview_menu.selection()
         if not seleccion:
@@ -274,8 +300,13 @@ class AplicacionConPestanas(ctk.CTk):
     def actualizar_treeview_pedido(self):
         for item in self.treeview_menu.get_children():
             self.treeview_menu.delete(item)
-        for menu in self.pedido.menus:
-            self.treeview_menu.insert("", "end", values=(menu.nombre, menu.cantidad, f"${menu.precio:.2f}"))
+        for item in self.pedido.mostrar_pedido():
+            self.treeview_menu.insert(
+                "", "end",
+                values=(item["nombre"], item["cantidad"], f'${item["precio_unitario"]:,.0f}'.replace(",", "."))
+            )
+        self.label_total.configure(text=f'Total: ${self.pedido.calcular_total():,.0f}'.replace(",", "."))
+
 
     def generar_boleta(self):
         if not self.pedido.menus:
@@ -298,18 +329,63 @@ class AplicacionConPestanas(ctk.CTk):
 
         self.pdf_viewer_carta = None
 
+
+    def _mostrar_pdf_sin_cache(self, frame, viewer_attr_name: str, src_pdf_path: str):
+        """
+        Crea una copia temporal del PDF (nombre único) para evitar cache/lock
+        y actualiza el CTkPDFViewer correspondiente.
+        """
+        # Asegurar ruta absoluta del origen
+        src_pdf_path = os.path.abspath(src_pdf_path)
+
+        # Carpeta temp local
+        tmp_dir = os.path.join(os.getcwd(), "tmp_pdf")
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        # Nombre único (timestamp + uuid) para romper cache
+        unique_name = f"{int(time.time())}_{uuid.uuid4().hex}.pdf"
+        dst_pdf_path = os.path.join(tmp_dir, unique_name)
+
+        # Copiar al temp (evita locks del generador)
+        shutil.copyfile(src_pdf_path, dst_pdf_path)
+
+        # Cerrar/desechar visor anterior si existe
+        old_viewer = getattr(self, viewer_attr_name, None)
+        if old_viewer is not None:
+            try:
+                old_viewer.pack_forget()
+                old_viewer.destroy()
+            except Exception:
+                pass
+            setattr(self, viewer_attr_name, None)
+
+        # Crear visor nuevo con la copia única
+        try:
+            abs_pdf = os.path.abspath(dst_pdf_path)
+            new_viewer = CTkPDFViewer(frame, file=abs_pdf)
+            new_viewer.pack(expand=True, fill="both")
+            setattr(self, viewer_attr_name, new_viewer)
+        except Exception as e:
+            CTkMessagebox(title="Error", message=f"No se pudo mostrar el PDF.\n{e}", icon="warning")
+
     def generar_y_mostrar_carta_pdf(self):
         try:
-            pdf_path = "carta.pdf"
-            create_menu_pdf(self.menus, pdf_path, titulo_negocio="Restaurante", subtitulo="Carta Primavera 2025", moneda="$")
-            if self.pdf_viewer_carta is not None:
-                self.pdf_viewer_carta.pack_forget()
-                self.pdf_viewer_carta.destroy()
-            abs_pdf = os.path.abspath(pdf_path)
-            self.pdf_viewer_carta = CTkPDFViewer(self.pdf_frame_carta, file=abs_pdf)
-            self.pdf_viewer_carta.pack(expand=True, fill="both")
+            # Generar contenido según stock (si quieres sin filtro, usa self.menus directo)
+            menus_disponibles = [m for m in self.menus if self._stock_suficiente_para_menu(m, 1)]
+
+            # Generar en un nombre base estable (el generador lo sobreescribe)
+            base_pdf_path = os.path.abspath("carta.pdf")
+            create_menu_pdf(menus_disponibles, base_pdf_path,
+                            titulo_negocio="Restaurante",
+                            subtitulo="Carta actual",
+                            moneda="$")
+
+            # Mostrar usando copia temporal con nombre único (rompe cache)
+            self._mostrar_pdf_sin_cache(self.pdf_frame_carta, "pdf_viewer_carta", base_pdf_path)
+
         except Exception as e:
-            CTkMessagebox(title="Error", message=f"No se pudo generar/mostrar la carta.\n{e}", icon="warning")
+            CTkMessagebox(title="Error", message=f"No se pudo generar la carta.\n{e}", icon="warning")
+
 
     def _configurar_pestana_ver_boleta(self):
         contenedor = ctk.CTkFrame(self.tab5)
@@ -354,6 +430,55 @@ class AplicacionConPestanas(ctk.CTk):
                 icon="warning"
             )
             return False
+    def _stock_suficiente_para_menu(self, menu, cantidad=1):
+        """
+        Verifica si hay stock suficiente para preparar un menú.
+        Usa el método original del menú para mantener compatibilidad con el código base.
+        """
+        try:
+            if cantidad == 1:
+                return menu.esta_disponible(self.stock)
+            else:
+                # chequeo manual si piden más de 1
+                for req in menu.ingredientes:
+                    req_total = int(req.cantidad) * int(cantidad)
+                    ing = next(
+                        (i for i in self.stock.lista_ingredientes
+                        if i.nombre.strip().lower() == req.nombre.strip().lower()
+                        and str(i.unidad).lower() == str(req.unidad).lower()),
+                        None
+                    )
+                    if ing is None or int(ing.cantidad) < req_total:
+                        return False
+                return True
+        except Exception as e:
+            print("Error en _stock_suficiente_para_menu:", e)
+            return False
+
+
+    def _descontar_stock_por_menu(self, menu, cantidad=1):
+        """
+        Descuenta del stock los ingredientes usados por el menú.
+        """
+        try:
+            for req in menu.ingredientes:
+                req_total = int(req.cantidad) * int(cantidad)
+                for ing in self.stock.lista_ingredientes:
+                    if ing.nombre.strip().lower() == req.nombre.strip().lower() and \
+                    str(ing.unidad).lower() == str(req.unidad).lower():
+                        ing.cantidad = max(0, int(ing.cantidad) - req_total)
+                        break
+        except Exception as e:
+            print("Error al descontar stock:", e)
+
+    def _cantidad_actual(self, nombre, unidad):
+        for ing in self.stock.lista_ingredientes:
+            if ing.nombre.lower() == nombre.lower() and str(ing.unidad).lower() == str(unidad).lower():
+                try:
+                    return int(ing.cantidad)
+                except Exception:
+                    return 0
+        return 0
 
 
 
