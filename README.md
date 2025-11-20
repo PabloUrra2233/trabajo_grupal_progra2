@@ -1,2 +1,2 @@
 # trabajo_grupal_progra2
-Trabajo de programación en python con Custom Tkinter y quizá usemos pandas también, super fome 🏄.
+Sistema de Gestión de Clientes, Pedidos y Menús para un Restaurante, desarrollado en Python utilizando programación orientada a objetos, SQLAlchemy como ORM, interfaces gráficas con customtkinter y generación de gráficos con matplotlib. Incluye módulos de gestión de ingredientes, menús, clientes, pedidos y un proceso completo de compra, además de validaciones, manejo de errores y estadísticas del sistema.
