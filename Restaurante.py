@@ -285,16 +285,28 @@ class AplicacionConPestanas(ctk.CTk):
         self.actualizar_treeview_pedido()
         self.generar_menus()
 
-    
+        
     def eliminar_menu(self):
         seleccion = self.treeview_menu.selection()
         if not seleccion:
             CTkMessagebox(title="Atención", message="Selecciona un menú para eliminar.", icon="warning")
             return
+
         for item in seleccion:
             nombre = self.treeview_menu.item(item, "values")[0]
-            self.pedido.menus = [m for m in self.pedido.menus if m.nombre != nombre]
+            menu_eliminado = next((m for m in self.pedido.menus if m.nombre == nombre), None)
+
+            if menu_eliminado:
+                # Restaurar stock según la cantidad real del menú
+                self._restaurar_stock_por_menu(menu_eliminado, menu_eliminado.cantidad)
+
+                # Quitar del pedido completamente
+                self.pedido.menus.remove(menu_eliminado)
+
+        self.actualizar_treeview()
+        self.generar_menus()
         self.actualizar_treeview_pedido()
+
         CTkMessagebox(title="Menú eliminado", message="El menú fue eliminado del pedido.", icon="info")
 
     def actualizar_treeview_pedido(self):
@@ -306,6 +318,14 @@ class AplicacionConPestanas(ctk.CTk):
                 values=(item["nombre"], item["cantidad"], f'${item["precio_unitario"]:,.0f}'.replace(",", "."))
             )
         self.label_total.configure(text=f'Total: ${self.pedido.calcular_total():,.0f}'.replace(",", "."))
+
+    def _restaurar_stock_por_menu(self, menu, cantidad=1):
+        for req in menu.ingredientes:
+            req_total = int(req.cantidad) * cantidad
+            for ing in self.stock.lista_ingredientes:
+                if ing.nombre.lower() == req.nombre.lower() and ing.unidad == req.unidad:
+                    ing.cantidad = int(ing.cantidad) + req_total
+                    break
 
 
     def generar_boleta(self):

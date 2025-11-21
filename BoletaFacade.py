@@ -1,5 +1,7 @@
 from fpdf import FPDF
 from datetime import datetime
+from random import randint
+
 
 class BoletaFacade:
     def __init__(self, pedido):
@@ -8,6 +10,7 @@ class BoletaFacade:
         self.subtotal = 0
         self.iva = 0
         self.total = 0
+        self.numero_boleta = randint(10000, 99999)
 
     def generar_detalle_boleta(self):
         self.detalle = ""
@@ -27,7 +30,7 @@ class BoletaFacade:
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "Boleta Restaurante", ln=True, align='L')
         pdf.set_font("Arial", size=12)
-        pdf.cell(0, 8, "Restaurante Cangri & Sons™", ln=True)
+        pdf.cell(0, 8, "Restaurante Cangri & Sons", ln=True)
         pdf.cell(0, 8, "RUT: 65.053.282-8", ln=True)
         pdf.cell(0, 8, "Dirección: Calle Los Mishes 404", ln=True)
         pdf.cell(0, 8, "Teléfono: +56 9 4527 6815", ln=True)
